@@ -58,7 +58,7 @@ def cmd_pools(args: argparse.Namespace) -> int:
 
     trade_date = args.date or dt.date.today()
     try:
-        spot_df = data.spot(trade_date, offline=args.offline)
+        spot_df = data.spot(trade_date, offline=args.offline, source=args.source)
         pool_a = pools.pool_a(spot_df, config.TOP_N)
         report.print_frame(pool_a, f"池 A · 成交额前 {config.TOP_N}  [{trade_date}]")
 
@@ -91,7 +91,7 @@ def cmd_screen(args: argparse.Namespace) -> int:
 
     trade_date = args.date or dt.date.today()
     try:
-        spot_df = data.spot(trade_date, offline=args.offline)
+        spot_df = data.spot(trade_date, offline=args.offline, source=args.source)
         pool_a = pools.pool_a(spot_df, config.TOP_N)
         s_value = pools.strength(pool_a, spot_df)
     except data.DataError as exc:
@@ -157,6 +157,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_pools.add_argument(
         "--offline", action="store_true", help="只用本地缓存，不联网（东财限流时用）"
     )
+    p_pools.add_argument(
+        "--source", default="auto", choices=["auto", "em", "sina"],
+        help="行情源：auto=东财失败自动回退新浪；em=东财；sina=新浪",
+    )
     p_pools.set_defaults(func=cmd_pools)
 
     p_screen = sub.add_parser("screen", help="当天候选打分（骨架）")
@@ -165,6 +169,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_screen.add_argument("--form", default="flat", choices=["pullback", "flat", "straight"])
     p_screen.add_argument(
         "--offline", action="store_true", help="只用本地缓存，不联网（东财限流时用）"
+    )
+    p_screen.add_argument(
+        "--source", default="auto", choices=["auto", "em", "sina"],
+        help="行情源：auto=东财失败自动回退新浪；em=东财；sina=新浪",
     )
     p_screen.set_defaults(func=cmd_screen)
 

@@ -13,6 +13,7 @@ NOTE: akshare 的接口签名在不同版本间会变。若报错，先跑 `shor
 from __future__ import annotations
 
 import datetime as dt
+import sys
 from typing import Iterable, List, Optional
 
 import pandas as pd
@@ -201,11 +202,49 @@ def to_date_str(value) -> str:
 
 
 # ------------------------------------------------------------------ 行情快照
-def spot(trade_date: Optional[dt.date] = None, offline: bool = False) -> pd.DataFrame:
+def _resolve_sources(source: str) -> List[str]:
+    """把 --source 展开成尝试顺序：auto 先东财、限流时回退新浪。"""
+    source = (source or "auto").strip().lower()
+    if source == "auto":
+        return ["em", "sina"]
+    if source in ("em", "sina"):
+        return [source]
+    raise DataError(f"未知行情源 {source!r}（可选：auto / em / sina）")
+
+
+def _fetch_spot(ak, source: str) -> pd.DataFrame:
+    """按数据源取全市场快照。
+
+    - em   : 东财 `stock_zh_a_spot_em`（字段全，但 push2 高频限流）
+    - sina : 新浪 `stock_zh_a_spot`（字段少，但服务器不同、不受东财限流）
+    """
+    if source == "em":
+        return ak.stock_zh_a_spot_em()
+    if source == "sina":
+        return ak.stock_zh_a_spot()
+    raise DataError(f"未知行情源 {source!r}")
+
+
+def _clean_codes(df: pd.DataFrame) -> pd.DataFrame:
+    """统一代码为 6 位数字字符串（去 sh/sz/bj 前缀 + 补前导零）。"""
+    if "code" in df.columns:
+        df = df.copy()
+        df["code"] = (
+            df["code"]
+            .astype(str)
+            .str.strip()
+            .str.replace(r"^(sh|sz|bj)", "", regex=True, case=False)
+            .str.zfill(6)
+        )
+    return df
+
+
+def spot(trade_date: Optional[dt.date] = None, offline: bool = False, source: str = "auto") -> pd.DataFrame:
     """全市场实时/收盘行情快照。
 
-    `stock_zh_a_spot_em` 一次要翻几十页拉全市场 5000+ 只票，是东财限流的头号
-    触发点。所以：
+    默认数据源是东财 `stock_zh_a_spot_em`（字段全，但一次要翻几十页拉全市场
+    5000+ 只票，是东财限流的头号触发点）；`source="auto"` 时东财失败会自动
+    回退到新浪 `stock_zh_a_spot`（字段少，但服务器不同、不受东财限流）。所以：
 
     - **15:05 之后**：当日数据已终值，若当日缓存存在就直接复用，不再打接口；
     - **盘中**：每次都取实时值（缓存会过时），因此盘中别高频重跑；
@@ -228,15 +267,30 @@ def spot(trade_date: Optional[dt.date] = None, offline: bool = False) -> pd.Data
         )
 
     ak = _ak()
-    try:
-        raw = ak.stock_zh_a_spot_em()
-    except Exception as exc:
-        raise DataError(f"拉取行情快照失败：{_explain(exc)}") from exc
-    df = _normalize(
-        raw, SPOT_MAP, "stock_zh_a_spot_em", required=("code", "name", "amount", "pct")
-    )
-    _cache(df, "spot", day)
-    return df
+    sources = _resolve_sources(source)
+    last_exc: Optional[Exception] = None
+    for src in sources:
+        try:
+            raw = _fetch_spot(ak, src)
+            df = _normalize(
+                raw, SPOT_MAP, f"spot:{src}", required=("code", "name", "amount", "pct")
+            )
+            df = _clean_codes(df)
+            df["amount"] = pd.to_numeric(df["amount"], errors="coerce")
+            df["pct"] = pd.to_numeric(
+                df["pct"].astype(str).str.replace("%", "", regex=False), errors="coerce"
+            )
+            _cache(df, "spot", day)
+            if src != sources[0]:
+                print(
+                    f"  提示：{sources[0]} 行情源不可用，已回退到 {src} 源。",
+                    file=sys.stderr,
+                )
+            return df
+        except Exception as exc:  # noqa: BLE001 - 逐源尝试，任一失败就试下一个
+            last_exc = exc
+            continue
+    raise DataError(f"拉取行情快照失败：{_explain(last_exc)}") from last_exc
 
 
 # ------------------------------------------------------------------ 涨停池
