@@ -1,0 +1,59 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "limitup-playbook"
+version = "0.1.0"
+description = "A-share limit-up (da-ban) trading playbook: rules, screener, scoring card and trade journal."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "max_h" }]
+keywords = ["a-share", "limit-up", "trading-playbook", "stock-screener", "akshare", "quant"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Financial and Insurance Industry",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Office/Business :: Financial :: Investment",
+]
+
+dependencies = [
+    "pandas>=2.0",
+    "akshare>=1.14",
+]
+
+[project.optional-dependencies]
+dev = ["ruff>=0.6", "pytest>=8"]
+journal = ["openpyxl>=3.1"]
+
+[project.scripts]
+limitup = "limitup.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/your-name/limitup-playbook"
+Issues = "https://github.com/your-name/limitup-playbook/issues"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+# 代码要同时兼容 3.9（macOS 自带 python3 / 老发行版），
+# 所以保留 typing.Dict / List / Optional 写法 —— 这三条 UP 规则要求 3.10+ 语法。
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["E501", "UP006", "UP035", "UP045"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-q"

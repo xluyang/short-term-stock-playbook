@@ -1,0 +1,268 @@
+# limitup-playbook
+
+> **A 股短线打板打法手册**：一套可执行的涨停接力 playbook —— 规则文档 → 环境判定 → 方向承接 → 个股打分 → 交易打卡，五段闭环。
+> 规则来自一段直播口播的结构化还原，工程上补齐了仓位、过滤、风控与验证。
+
+[![CI](https://github.com/your-name/limitup-playbook/actions/workflows/ci.yml/badge.svg)](https://github.com/your-name/limitup-playbook/actions/workflows/ci.yml)
+![python](https://img.shields.io/badge/python-3.9%20%7C%203.11%20%7C%203.13-blue)
+![license](https://img.shields.io/badge/license-MIT-green)
+![status](https://img.shields.io/badge/status-alpha-orange)
+![data](https://img.shields.io/badge/data-akshare-9cf)
+
+> ⚠️ **免责声明**：本项目仅供个人研究与交易记录，**不构成投资建议**，不提供下单接口。数据来自第三方公开接口，准确性不作保证。打板为高风险交易方式，亏损自负。
+
+---
+
+## 目录
+
+- [它解决什么问题](#它解决什么问题)
+- [快速开始](#快速开始)
+- [三大部分](#三大部分)
+- [打卡表怎么用](#打卡表怎么用)
+- [命令参考](#命令参考)
+- [模型参数](#模型参数)
+- [项目结构](#项目结构)
+- [数据说明](#数据说明)
+- [验证方法](#验证方法)
+- [已知限制](#已知限制)
+- [路线图](#路线图)
+- [关于名字](#关于名字)
+- [许可证](#许可证)
+
+---
+
+## 它解决什么问题
+
+短线打板的核心不是"选到涨停股"，而是**在正确的日子、正确的方向、正确的时间点，只做高确定性的那一个板**。散户亏钱通常不是选错票，而是：
+
+1. 环境不对（弱势区照样满仓）→ 池 A 用来解决；
+2. 方向不对（做了没人接力的板块）→ 池 B 用来解决；
+3. 时间不对（早盘追高被埋）→ 时间窗用来解决；
+4. 没有记录（不知道自己的封板率、胜率、盈亏比）→ 打卡表用来解决。
+
+本项目把这四件事变成可执行的清单与可统计的表格。
+
+## 快速开始
+
+本项目**完全自包含**：解释器环境 `.venv` 建在仓库根目录，依赖只装进 `.venv`，不读取、不修改任何外部虚拟环境或全局 site-packages。
+
+### 一键脚本（推荐）
+
+```bash
+git clone https://github.com/your-name/limitup-playbook.git
+cd limitup-playbook
+
+# Windows
+.\scripts\bootstrap.ps1
+
+# macOS / Linux
+./scripts/bootstrap.sh
+```
+
+脚本会依次：定位 3.9–3.13 的 Python → 建 `.venv` → 升级 pip → `pip install -e ".[dev,journal]"` → 跑 `limitup doctor` 自检。重复执行安全（复用已有 `.venv`），`-Recreate` / `--recreate` 可重建。
+
+> Windows 若提示「禁止运行脚本」，改用：
+> `powershell -ExecutionPolicy Bypass -File .\scripts\bootstrap.ps1`
+> macOS / Linux 首次可能需要 `chmod +x scripts/bootstrap.sh`。
+
+### 手动等价操作
+
+```bash
+python -m venv .venv
+source .venv/bin/activate              # Windows: .\.venv\Scripts\Activate.ps1
+python -m pip install -U pip
+python -m pip install -e ".[dev,journal]"    # akshare / pandas / openpyxl / pytest / ruff
+
+limitup doctor                     # 环境自检（离线）
+limitup journal                    # 生成打卡表 -> output/journal_YYYYMMDD.xlsx
+limitup pools                      # 构建当日三层标的池（需联网取数）
+```
+
+> 不想激活也行，直接用 `.\.venv\Scripts\python.exe -m limitup doctor`（Windows）或 `.venv/bin/python -m limitup doctor`（macOS/Linux）。
+
+### 依赖清单
+
+全部声明在 [`pyproject.toml`](pyproject.toml)，没有隐藏依赖：
+
+| 依赖 | 版本 | 用途 |
+|---|---|---|
+| `pandas` | ≥2.0 | 数据处理 |
+| `akshare` | ≥1.14 | 行情与涨停池数据（唯一数据源） |
+| `openpyxl` | ≥3.1 | `journal` 扩展：生成 xlsx |
+| `pytest` / `ruff` | — | `dev` 扩展：测试与检查 |
+
+只想要筛选不生成 Excel？`pip install -e .` 即可，省掉 openpyxl。
+
+## 三大部分
+
+### 1. 规则文档 —— [`docs/model.md`](docs/model.md)
+
+完整模型：原文规则 → 可操作定义的映射表、三层池、9 条硬性过滤、打分卡、执行时间轴、风控阈值、验证方案、已知缺陷。
+
+### 2. 打卡表 —— `limitup journal`
+
+`templates/journal_template.xlsx` 是预先生成好的空模板（21 KB），直接双击就能填；想要一份新的执行 `limitup journal --out 任意路径.xlsx`。
+
+Excel 三页：
+
+| 页 | 内容 |
+|---|---|
+| 打卡 | 20 列 × 120 行，总分/隔日溢价/账户贡献为公式，`是否封住` 带下拉校验 |
+| 统计 | 总笔数、封板率、胜率、盈亏比、累计贡献、平均得分，**全部公式自动更新** |
+| 说明 | 每列口径 + 打分规则 + 免责声明 |
+
+### 3. 筛选脚本 —— [`src/limitup/`](src/limitup/)
+
+| 模块 | 职责 |
+|---|---|
+| `data.py` | 唯一接触 akshare 的地方；列名归一化 + 本地 csv 缓存 |
+| `pools.py` | 池 A/B/C 构建（纯函数，可单测） |
+| `score.py` | 打分卡（纯函数，零依赖） |
+| `journal.py` | 打卡表生成器（openpyxl） |
+| `cli.py` | `doctor` / `pools` / `screen` / `journal` |
+| `report.py` | 中文对齐的控制台表格与 CSV 导出 |
+
+## 打卡表怎么用
+
+1. 每笔交易填一行，**只填白底列**：S值、方向分、资质分、时间窗分、形态分、买入价、是否封住、次日开盘价、仓位。
+2. 灰列是公式，别覆盖：
+   - `总分 = S值/5×30 + 方向分 + 资质分 + 时间窗分 + 形态分`
+   - `隔日溢价 = (次日开盘价 − 买入价) / 买入价`
+   - `账户贡献 = 隔日溢价 × 仓位`
+3. 统计页不用管，随填随算。
+4. **总分 < 70 却下了单**，在备注写「违规」——统计页会自动算违规笔数，这是复盘最有价值的一列。
+
+各分项口径见打卡表「说明」页，或 [`docs/model.md`](docs/model.md) 第 6 节。
+
+## 命令参考
+
+| 命令 | 作用 |
+|---|---|
+| `limitup doctor` | Python / pandas / akshare 版本、缓存目录、当前模型参数摘要 |
+| `limitup pools [--date YYYY-MM-DD] [--history-days 90] [--offline]` | 打印池 A / 池 B / 池 C |
+| `limitup screen [--minutes 25] [--form pullback] [--offline]` | 当日涨停股打分（触板时间与形态需人工确认） |
+| `limitup journal [--out 路径] [--rows 120]` | 生成打卡表 |
+
+`--offline`：完全不发网络请求，只读 `cache/`。被东财限流时靠它继续工作。
+
+## 模型参数
+
+全部集中在 [`src/limitup/config.py`](src/limitup/config.py)，回测调参只改这一处：
+
+| 参数 | 默认 | 含义 |
+|---|---|---|
+| `TOP_N` | 5 | 池 A 取成交额前 N |
+| `MIN_S` | 3 | S 低于此值空仓 |
+| `S_POSITION` | 5→30% / 4→22% / 3→12% | S 值对应仓位上限 |
+| `HANDOFF_MIN_AMOUNT` | 10 亿 | 池 B 首板成交额门槛 |
+| `HIST_WINDOW_2 / 4` | 10 / 90 日 | 池 C 连板历史窗口 |
+| `MIN_AMOUNT` | 5 亿 | 个股成交额下限 |
+| `EXEC_START / END` | 20 / 60 分钟 | 9:50–10:30 执行窗口 |
+| `MIN_SCORE` | 70 | 下单达标线 |
+
+## 项目结构
+
+```
+limitup-playbook/
+├─ docs/model.md              模型规格（核心文档）
+├─ src/limitup/               筛选工具包
+│  ├─ data.py                 唯一接触 akshare 的层
+│  ├─ pools.py / score.py     纯函数：建池、打分
+│  ├─ journal.py / report.py  输出：xlsx 打卡表、终端表格
+│  └─ cli.py / config.py      命令入口、全局阈值
+├─ tests/                     单测（零联网，不依赖 akshare）
+├─ templates/                 打卡表模板（由 limitup journal 生成）
+├─ scripts/
+│  ├─ bootstrap.ps1           Windows 一键装环境（只用项目内 .venv）
+│  └─ bootstrap.sh            macOS / Linux 同上
+├─ output/                    生成物（git 忽略）
+├─ .venv/                     项目自带解释器环境（git 忽略）
+└─ pyproject.toml             依赖与打包的唯一声明处
+```
+
+### 环境隔离约定
+
+- 运行期只认 `<repo>/.venv`，**不 fallback 到系统 Python、不读取其它项目的 venv**。
+- 依赖版本全部由 `pyproject.toml` 钉住范围，换个机器 `bootstrap` 一遍结果一致。
+- 环境坏了直接 `bootstrap.ps1 -Recreate` / `bootstrap.sh --recreate`，重建不动源码与数据。
+- `cache/` 与 `output/` 是运行期目录，删掉不影响正确性，只会重新拉数。
+
+## 数据说明
+
+- 数据源：**akshare**（免费公开接口），字段映射见 `data.py` 的 `SPOT_MAP` / `ZT_MAP` / `PREV_ZT_MAP`。
+- **今日涨停池与昨日涨停池是两套 schema**：`stock_zt_pool_em` 有封板资金/炸板次数，`stock_zt_pool_previous_em` 只有「昨日连板数 / 昨日封板时间」。所以映射表分成两张。
+- 历史涨停池会落 `cache/*.csv` 并在下次直接复用（池 C 要回看 90 个交易日，没缓存每次要打 90 次请求）；**当日数据不在缓存里读**，因为盘中会变。
+- 缓存往返会把股票代码的前导零吃掉（`000525` → `525`），已在读取时强制按字符串处理。
+- akshare 版本升级可能改列名 → 报错信息会打印「必需列」与「实际列」，照着改映射表即可。
+- 本项目**不存储、不分发**任何行情数据；不包含个股推荐。
+
+### 被东方财富限流了怎么办
+
+`stock_zh_a_spot_em` 一次要翻几十页拉全市场 5000+ 只票，是限流的头号触发点。症状是：
+
+```
+拉取行情快照失败：东方财富 push2 行情服务器断开了连接，通常是短时间内请求过多…
+```
+
+处理顺序（**不要边等边重试，会延长限流**）：
+
+1. **有当日缓存就离线跑**：`limitup pools --offline`，一个请求都不发；
+2. **没缓存就等**：首次限流一般 5 分钟恢复，反复触发可能 40 分钟以上；
+3. **改成一天只拉一次**：`spot` 在 15:05 之后会自动复用当日缓存，收盘后跑一遍即可，不用反复跑。
+
+已内置的减负措施：
+
+| 措施 | 效果 |
+|---|---|
+| 15:05 后复用当日 spot 缓存 | 全天只需 1 次全市场请求 |
+| 历史涨停池按日缓存 | 池 C 的 90 天回看第二次起 0 请求 |
+| 交易日历缓存 24 小时 | 只从新浪拉一次 |
+| `--offline` 全局开关 | 断网 / 限流时完全离线 |
+
+## 验证方法
+
+策略是否有效，只看四个数（打卡表统计页自动算）：
+
+| 指标 | 目标 |
+|---|---|
+| 封板率 | > 65% |
+| 胜率 | > 55% |
+| 盈亏比 | > 1.5 |
+| 平均隔日溢价 | > 2% |
+
+**样本门槛**：≥ 100 笔、跨 ≥ 3 个月、包含至少一段退潮期。
+
+**必须有对照组**：同样的票、同样的日期，随机在 9:50 后买入。若两组收益无差异，说明规则没有 alpha。
+
+**过拟合检查**：阈值（S≥3、10 亿、10 日、90 日）各上下浮动 20% 重跑，结论应保持同向。
+
+## 已知限制
+
+- `screen` 是**骨架**：首次触板时间与分时形态需要分时数据（`stock_zh_a_hist_min_em`）或人工判断，尚未自动接入。
+- **池 A 的时点由运行时刻决定**：`spot()` 拿的是「调用瞬间」的全市场快照。**开盘前跑 → 数据是昨日的**（这才是模型要的、无未来函数）；**收盘后跑 → 数据是今日的**（适合复盘、准备明天的池）。同一条命令，跑的时间不同含义不同。
+- 板块归属（池 B 的方向聚合）需要额外的成分股接口，当前只返回个股；`sector` 字段已带出，但尚未做聚合。
+- 无回测引擎：历史回放建议把 `pools` / `score` 当纯函数，自己写循环。
+- 打板滑点常 > 1%，而策略赚的是 ~2% 的隔日溢价，**执行速度决定生死**。
+
+## 路线图
+
+- [x] 三层池构建 + 打分卡 + 打卡表
+- [ ] 接入分时接口，自动计算首次触板时间
+- [ ] 板块成分与涨停家数聚合
+- [ ] 历史回测引擎（事件驱动，含滑点模型）
+- [ ] 情绪指标（炸板率、连板高度、跌停家数）作为全局开关
+- [ ] 打卡表自动读取成交记录（券商导出 csv）
+
+## 关于名字
+
+`limitup` 是英语金融里的标准术语 —— 涨停（`limit up`），反义词 `limit down` 即跌停；`playbook` 指一支队伍的**战术手册**。
+
+打板亏钱很少是因为「找不到涨停的票」，多数是因为**没有一套必须遵守的打法**：什么环境下才做、做哪个方向、几点下单、错了怎么退、事后怎么复盘。本项目把这几件事写成了一本可执行的 playbook —— 规则写死在文档里、阈值写死在 `config.py`、执行痕迹落在打卡表里。
+
+所以它不是一个选股器（screener），而是一本**要照着做的**手册。
+
+## 许可证
+
+[MIT](LICENSE) © 2026 max_h
+
+> 模型规则来自公开直播内容的结构化整理，仅作个人研究记录；如涉及版权问题请联系删除。
