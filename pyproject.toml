@@ -34,8 +34,8 @@ journal = ["openpyxl>=3.1"]
 limitup = "limitup.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/your-name/limitup-playbook"
-Issues = "https://github.com/your-name/limitup-playbook/issues"
+Homepage = "https://github.com/xluyang/tactical-playbook"
+Issues = "https://github.com/xluyang/tactical-playbook/issues"
 
 [tool.setuptools]
 package-dir = { "" = "src" }

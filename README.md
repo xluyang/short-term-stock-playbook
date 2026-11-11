@@ -3,7 +3,7 @@
 > **A 股短线打板打法手册**：一套可执行的涨停接力 playbook —— 规则文档 → 环境判定 → 方向承接 → 个股打分 → 交易打卡，五段闭环。
 > 规则来自一段直播口播的结构化还原，工程上补齐了仓位、过滤、风控与验证。
 
-[![CI](https://github.com/your-name/limitup-playbook/actions/workflows/ci.yml/badge.svg)](https://github.com/your-name/limitup-playbook/actions/workflows/ci.yml)
+[![CI](https://github.com/xluyang/tactical-playbook/actions/workflows/ci.yml/badge.svg)](https://github.com/xluyang/tactical-playbook/actions/workflows/ci.yml)
 ![python](https://img.shields.io/badge/python-3.9%20%7C%203.11%20%7C%203.13-blue)
 ![license](https://img.shields.io/badge/license-MIT-green)
 ![status](https://img.shields.io/badge/status-alpha-orange)
@@ -49,8 +49,8 @@
 ### 一键脚本（推荐）
 
 ```bash
-git clone https://github.com/your-name/limitup-playbook.git
-cd limitup-playbook
+git clone https://github.com/xluyang/tactical-playbook.git
+cd tactical-playbook
 
 # Windows
 .\scripts\bootstrap.ps1
