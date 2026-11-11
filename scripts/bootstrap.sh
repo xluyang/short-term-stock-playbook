@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# limitup-playbook bootstrap (macOS / Linux)
+# short-term-stock-playbook bootstrap (macOS / Linux)
 #
 # 在仓库内建立独立虚拟环境 .venv 并安装全部依赖，不触碰系统 site-packages。
 # 重复执行安全：已有 .venv 复用，pip 只补缺的包。
@@ -29,7 +29,7 @@ ok()   { printf "${c_dim}    %s${c_off}\n" "$1"; }
 warn() { printf "${c_yellow}!!  %s${c_off}\n" "$1"; }
 
 echo
-printf "${c_green}limitup-playbook bootstrap${c_off}\n"
+printf "${c_green}short-term-stock-playbook bootstrap${c_off}\n"
 echo "  repo : $ROOT"
 echo "  venv : $VENV"
 echo
@@ -90,7 +90,7 @@ ok "依赖安装完成"
 # ------------------------------------------------------------------- 5. 自检
 step "环境自检"
 set +e
-( cd "$ROOT" && "$PY" -m limitup doctor )
+( cd "$ROOT" && "$PY" -m short_term_stock_playbook doctor )
 CODE=$?
 set -e
 
@@ -98,8 +98,8 @@ echo
 if [ "$CODE" -eq 0 ]; then
     printf "${c_green}bootstrap 成功。${c_off}\n\n"
     echo "下一步："
-    echo "  .venv/bin/python -m limitup journal"
-    echo "  .venv/bin/python -m limitup pools"
+    echo "  .venv/bin/python -m short_term_stock_playbook journal"
+    echo "  .venv/bin/python -m short_term_stock_playbook pools"
     echo "  .venv/bin/python -m pytest"
     echo
     echo "想少打字就先激活： source .venv/bin/activate"

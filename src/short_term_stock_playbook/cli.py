@@ -1,9 +1,9 @@
 """命令行入口。
 
-    limitup doctor        环境与参数自检
-    limitup pools         构建三层标的池
-    limitup journal       生成交易打卡表（xlsx）
-    limitup screen        当天候选打分（骨架，需人工确认分时）
+    short-term-stock-playbook doctor        环境与参数自检
+    short-term-stock-playbook pools         构建三层标的池
+    short-term-stock-playbook journal       生成交易打卡表（xlsx）
+    short-term-stock-playbook screen        当天候选打分（骨架，需人工确认分时）
 """
 
 from __future__ import annotations
@@ -28,7 +28,7 @@ def _err(msg: str) -> None:
 def cmd_doctor(args: argparse.Namespace) -> int:
     from . import data
 
-    _out(f"limitup-playbook {__version__}")
+    _out(f"short-term-stock-playbook {__version__}")
     _out("=" * 60)
     _out(f"python         {sys.version.split()[0]}")
     try:
@@ -145,8 +145,8 @@ def cmd_journal(args: argparse.Namespace) -> int:
 
 # ----------------------------------------------------------------------- main
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="limitup", description="A 股短线打板筛选工具（研究用途）")
-    parser.add_argument("-V", "--version", action="version", version=f"limitup-playbook {__version__}")
+    parser = argparse.ArgumentParser(prog="short-term-stock-playbook", description="A 股短线打板筛选工具（研究用途）")
+    parser.add_argument("-V", "--version", action="version", version=f"short-term-stock-playbook {__version__}")
     sub = parser.add_subparsers(dest="command")
 
     sub.add_parser("doctor", help="环境与参数自检").set_defaults(func=cmd_doctor)

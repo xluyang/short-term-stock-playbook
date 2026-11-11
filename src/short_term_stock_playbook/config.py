@@ -41,8 +41,8 @@ POSITION_BANDS = ((90, 0.30), (80, 0.20), (70, 0.10))
 
 
 def home() -> Path:
-    """项目根目录，可用 LIMITUP_HOME 覆盖。"""
-    raw = os.environ.get("LIMITUP_HOME")
+    """项目根目录，可用 SHORT_TERM_STOCK_PLAYBOOK_HOME 覆盖。"""
+    raw = os.environ.get("SHORT_TERM_STOCK_PLAYBOOK_HOME")
     if raw:
         return Path(raw).expanduser().resolve()
     here = Path(__file__).resolve()
@@ -53,15 +53,15 @@ def home() -> Path:
 
 
 def cache_dir() -> Path:
-    """行情缓存目录，可用 LIMITUP_CACHE_DIR 覆盖。"""
-    raw = os.environ.get("LIMITUP_CACHE_DIR")
+    """行情缓存目录，可用 SHORT_TERM_STOCK_PLAYBOOK_CACHE_DIR 覆盖。"""
+    raw = os.environ.get("SHORT_TERM_STOCK_PLAYBOOK_CACHE_DIR")
     base = Path(raw).expanduser().resolve() if raw else home() / "cache"
     base.mkdir(parents=True, exist_ok=True)
     return base
 
 
 def output_dir() -> Path:
-    raw = os.environ.get("LIMITUP_OUTPUT_DIR")
+    raw = os.environ.get("SHORT_TERM_STOCK_PLAYBOOK_OUTPUT_DIR")
     base = Path(raw).expanduser().resolve() if raw else home() / "output"
     base.mkdir(parents=True, exist_ok=True)
     return base

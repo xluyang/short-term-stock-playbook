@@ -47,11 +47,11 @@ jobs:
           python -m pip install -e . --no-deps
           python -m pip install pandas pytest
       - name: Import smoke
-        run: python -c "import limitup, limitup.pools, limitup.score, limitup.report; print('ok', limitup.__version__)"
+        run: python -c "import short_term_stock_playbook, short_term_stock_playbook.pools, short_term_stock_playbook.score, short_term_stock_playbook.report; print('ok', short_term_stock_playbook.__version__)"
       - name: Unit tests
         run: pytest -q
       - name: CLI help
-        run: python -m limitup --help
+        run: python -m short_term_stock_playbook --help
 
   journal:
     name: journal generator smoke
@@ -67,6 +67,6 @@ jobs:
           python -m pip install -e . --no-deps
           python -m pip install openpyxl pandas
       - name: Build xlsx
-        run: python -m limitup journal --out /tmp/journal.xlsx
+        run: python -m short_term_stock_playbook journal --out /tmp/journal.xlsx
       - name: Check file
         run: python -c "import pathlib,sys; p=pathlib.Path('/tmp/journal.xlsx'); sys.exit(0 if p.exists() and p.stat().st_size>4000 else 1)"

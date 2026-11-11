@@ -6,7 +6,7 @@
 2. 归一化后所有函数返回固定的英文列，逻辑层永远不用管中文列名。
 3. 每个请求都落一份 csv 缓存（按日期分文件），方便回放与排查。
 
-NOTE: akshare 的接口签名在不同版本间会变。若报错，先跑 `limitup doctor`
+NOTE: akshare 的接口签名在不同版本间会变。若报错，先跑 `short-term-stock-playbook doctor`
 看当前 akshare 版本，再对照官方文档调整 `_ak(...)` 的调用参数。
 """
 
@@ -27,7 +27,7 @@ class DataError(RuntimeError):
 _RATE_HINT = (
     "\n\n东方财富对高频请求做了 IP 限流。处理顺序：\n"
     "  1) 已有当日缓存 → 加 `--offline` 直接读缓存，完全不发请求；\n"
-    "     limitup pools --offline\n"
+    "     short-term-stock-playbook pools --offline\n"
     "  2) 没有缓存 → 等 5 分钟以上再试。**期间不要反复重试**，会延长限流时间；\n"
     "  3) 收盘后 15:05 起 spot 会自动复用当日缓存，一天只需要拉一次。"
 )
@@ -224,7 +224,7 @@ def spot(trade_date: Optional[dt.date] = None, offline: bool = False) -> pd.Data
     if offline:
         raise DataError(
             f"离线模式：找不到 {day:%Y-%m-%d} 的行情缓存（cache/spot_{day:%Y%m%d}.csv）。\n"
-            f"先联网跑一次 `limitup pools` 生成缓存，之后就能用 --offline 复用。"
+            f"先联网跑一次 `short-term-stock-playbook pools` 生成缓存，之后就能用 --offline 复用。"
         )
 
     ak = _ak()

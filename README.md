@@ -1,9 +1,9 @@
-# limitup-playbook
+# short-term-stock-playbook
 
 > **A 股短线打板打法手册**：一套可执行的涨停接力 playbook —— 规则文档 → 环境判定 → 方向承接 → 个股打分 → 交易打卡，五段闭环。
 > 规则来自一段直播口播的结构化还原，工程上补齐了仓位、过滤、风控与验证。
 
-[![CI](https://github.com/xluyang/tactical-playbook/actions/workflows/ci.yml/badge.svg)](https://github.com/xluyang/tactical-playbook/actions/workflows/ci.yml)
+[![CI](https://github.com/xluyang/short-term-stock-playbook/actions/workflows/ci.yml/badge.svg)](https://github.com/xluyang/short-term-stock-playbook/actions/workflows/ci.yml)
 ![python](https://img.shields.io/badge/python-3.9%20%7C%203.11%20%7C%203.13-blue)
 ![license](https://img.shields.io/badge/license-MIT-green)
 ![status](https://img.shields.io/badge/status-alpha-orange)
@@ -49,8 +49,8 @@
 ### 一键脚本（推荐）
 
 ```bash
-git clone https://github.com/xluyang/tactical-playbook.git
-cd tactical-playbook
+git clone https://github.com/xluyang/short-term-stock-playbook.git
+cd short-term-stock-playbook
 
 # Windows
 .\scripts\bootstrap.ps1
@@ -59,7 +59,7 @@ cd tactical-playbook
 ./scripts/bootstrap.sh
 ```
 
-脚本会依次：定位 3.9–3.13 的 Python → 建 `.venv` → 升级 pip → `pip install -e ".[dev,journal]"` → 跑 `limitup doctor` 自检。重复执行安全（复用已有 `.venv`），`-Recreate` / `--recreate` 可重建。
+脚本会依次：定位 3.9–3.13 的 Python → 建 `.venv` → 升级 pip → `pip install -e ".[dev,journal]"` → 跑 `short-term-stock-playbook doctor` 自检。重复执行安全（复用已有 `.venv`），`-Recreate` / `--recreate` 可重建。
 
 > Windows 若提示「禁止运行脚本」，改用：
 > `powershell -ExecutionPolicy Bypass -File .\scripts\bootstrap.ps1`
@@ -73,12 +73,12 @@ source .venv/bin/activate              # Windows: .\.venv\Scripts\Activate.ps1
 python -m pip install -U pip
 python -m pip install -e ".[dev,journal]"    # akshare / pandas / openpyxl / pytest / ruff
 
-limitup doctor                     # 环境自检（离线）
-limitup journal                    # 生成打卡表 -> output/journal_YYYYMMDD.xlsx
-limitup pools                      # 构建当日三层标的池（需联网取数）
+short-term-stock-playbook doctor                     # 环境自检（离线）
+short-term-stock-playbook journal                    # 生成打卡表 -> output/journal_YYYYMMDD.xlsx
+short-term-stock-playbook pools                      # 构建当日三层标的池（需联网取数）
 ```
 
-> 不想激活也行，直接用 `.\.venv\Scripts\python.exe -m limitup doctor`（Windows）或 `.venv/bin/python -m limitup doctor`（macOS/Linux）。
+> 不想激活也行，直接用 `.\.venv\Scripts\python.exe -m short_term_stock_playbook doctor`（Windows）或 `.venv/bin/python -m short_term_stock_playbook doctor`（macOS/Linux）。
 
 ### 依赖清单
 
@@ -99,9 +99,9 @@ limitup pools                      # 构建当日三层标的池（需联网取�
 
 完整模型：原文规则 → 可操作定义的映射表、三层池、9 条硬性过滤、打分卡、执行时间轴、风控阈值、验证方案、已知缺陷。
 
-### 2. 打卡表 —— `limitup journal`
+### 2. 打卡表 —— `short-term-stock-playbook journal`
 
-`templates/journal_template.xlsx` 是预先生成好的空模板（21 KB），直接双击就能填；想要一份新的执行 `limitup journal --out 任意路径.xlsx`。
+`templates/journal_template.xlsx` 是预先生成好的空模板（21 KB），直接双击就能填；想要一份新的执行 `short-term-stock-playbook journal --out 任意路径.xlsx`。
 
 Excel 三页：
 
@@ -111,7 +111,7 @@ Excel 三页：
 | 统计 | 总笔数、封板率、胜率、盈亏比、累计贡献、平均得分，**全部公式自动更新** |
 | 说明 | 每列口径 + 打分规则 + 免责声明 |
 
-### 3. 筛选脚本 —— [`src/limitup/`](src/limitup/)
+### 3. 筛选脚本 —— [`src/short_term_stock_playbook/`](src/short_term_stock_playbook/)
 
 | 模块 | 职责 |
 |---|---|
@@ -138,16 +138,16 @@ Excel 三页：
 
 | 命令 | 作用 |
 |---|---|
-| `limitup doctor` | Python / pandas / akshare 版本、缓存目录、当前模型参数摘要 |
-| `limitup pools [--date YYYY-MM-DD] [--history-days 90] [--offline]` | 打印池 A / 池 B / 池 C |
-| `limitup screen [--minutes 25] [--form pullback] [--offline]` | 当日涨停股打分（触板时间与形态需人工确认） |
-| `limitup journal [--out 路径] [--rows 120]` | 生成打卡表 |
+| `short-term-stock-playbook doctor` | Python / pandas / akshare 版本、缓存目录、当前模型参数摘要 |
+| `short-term-stock-playbook pools [--date YYYY-MM-DD] [--history-days 90] [--offline]` | 打印池 A / 池 B / 池 C |
+| `short-term-stock-playbook screen [--minutes 25] [--form pullback] [--offline]` | 当日涨停股打分（触板时间与形态需人工确认） |
+| `short-term-stock-playbook journal [--out 路径] [--rows 120]` | 生成打卡表 |
 
 `--offline`：完全不发网络请求，只读 `cache/`。被东财限流时靠它继续工作。
 
 ## 模型参数
 
-全部集中在 [`src/limitup/config.py`](src/limitup/config.py)，回测调参只改这一处：
+全部集中在 [`src/short_term_stock_playbook/config.py`](src/short_term_stock_playbook/config.py)，回测调参只改这一处：
 
 | 参数 | 默认 | 含义 |
 |---|---|---|
@@ -163,15 +163,15 @@ Excel 三页：
 ## 项目结构
 
 ```
-limitup-playbook/
+short-term-stock-playbook/
 ├─ docs/model.md              模型规格（核心文档）
-├─ src/limitup/               筛选工具包
+├─ src/short_term_stock_playbook/               筛选工具包
 │  ├─ data.py                 唯一接触 akshare 的层
 │  ├─ pools.py / score.py     纯函数：建池、打分
 │  ├─ journal.py / report.py  输出：xlsx 打卡表、终端表格
 │  └─ cli.py / config.py      命令入口、全局阈值
 ├─ tests/                     单测（零联网，不依赖 akshare）
-├─ templates/                 打卡表模板（由 limitup journal 生成）
+├─ templates/                 打卡表模板（由 short-term-stock-playbook journal 生成）
 ├─ scripts/
 │  ├─ bootstrap.ps1           Windows 一键装环境（只用项目内 .venv）
 │  └─ bootstrap.sh            macOS / Linux 同上
@@ -206,7 +206,7 @@ limitup-playbook/
 
 处理顺序（**不要边等边重试，会延长限流**）：
 
-1. **有当日缓存就离线跑**：`limitup pools --offline`，一个请求都不发；
+1. **有当日缓存就离线跑**：`short-term-stock-playbook pools --offline`，一个请求都不发；
 2. **没缓存就等**：首次限流一般 5 分钟恢复，反复触发可能 40 分钟以上；
 3. **改成一天只拉一次**：`spot` 在 15:05 之后会自动复用当日缓存，收盘后跑一遍即可，不用反复跑。
 
@@ -255,7 +255,7 @@ limitup-playbook/
 
 ## 关于名字
 
-`limitup` 是英语金融里的标准术语 —— 涨停（`limit up`），反义词 `limit down` 即跌停；`playbook` 指一支队伍的**战术手册**。
+`short-term stock` 指 A 股短线交易（本项目聚焦涨停接力的短周期打法）；`playbook` 指一支队伍的**战术手册**。
 
 打板亏钱很少是因为「找不到涨停的票」，多数是因为**没有一套必须遵守的打法**：什么环境下才做、做哪个方向、几点下单、错了怎么退、事后怎么复盘。本项目把这几件事写成了一本可执行的 playbook —— 规则写死在文档里、阈值写死在 `config.py`、执行痕迹落在打卡表里。
 

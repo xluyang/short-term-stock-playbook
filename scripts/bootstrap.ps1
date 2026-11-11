@@ -40,7 +40,7 @@ function Write-Ok([string]$Text)   { Write-Host "    $Text" -ForegroundColor Dar
 function Write-Warn2([string]$Text){ Write-Host "!!  $Text" -ForegroundColor Yellow }
 
 Write-Host ''
-Write-Host 'limitup-playbook bootstrap' -ForegroundColor Green
+Write-Host 'short-term-stock-playbook bootstrap' -ForegroundColor Green
 Write-Host ("  repo : {0}" -f $Root)
 Write-Host ("  venv : {0}" -f $Venv)
 Write-Host ''
@@ -130,7 +130,7 @@ if (-not $SkipInstall) {
 Write-Step '环境自检'
 Push-Location $Root
 try {
-    & $Py -m limitup doctor
+    & $Py -m short_term_stock_playbook doctor
     $code = $LASTEXITCODE
 } finally {
     Pop-Location
@@ -141,8 +141,8 @@ if ($code -eq 0) {
     Write-Host 'bootstrap 成功。' -ForegroundColor Green
     Write-Host ''
     Write-Host '下一步：'
-    Write-Host '  .\.venv\Scripts\python.exe -m limitup journal'
-    Write-Host '  .\.venv\Scripts\python.exe -m limitup pools'
+    Write-Host '  .\.venv\Scripts\python.exe -m short_term_stock_playbook journal'
+    Write-Host '  .\.venv\Scripts\python.exe -m short_term_stock_playbook pools'
     Write-Host '  .\.venv\Scripts\python.exe -m pytest'
     Write-Host ''
     Write-Host '想少打字就先激活： .\.venv\Scripts\Activate.ps1'

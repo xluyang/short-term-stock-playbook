@@ -6,7 +6,7 @@ import datetime as dt
 
 import pandas as pd
 
-from limitup import pools
+from short_term_stock_playbook import pools
 
 
 def _spot():

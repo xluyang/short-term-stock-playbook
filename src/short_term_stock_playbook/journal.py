@@ -1,8 +1,8 @@
 """生成交易日打卡表（xlsx）。
 
 用法：
-    limitup journal                      # 输出到 output/journal_<日期>.xlsx
-    limitup journal --out 我的打卡表.xlsx
+    short-term-stock-playbook journal                      # 输出到 output/journal_<日期>.xlsx
+    short-term-stock-playbook journal --out 我的打卡表.xlsx
 
 设计说明
 --------

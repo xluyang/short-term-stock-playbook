@@ -195,7 +195,7 @@
 | 板块 | 所属概念/行业、板块涨停家数 | `stock_board_concept_name_em` / `stock_board_industry_name_em` |
 | 基础 | 流通市值、是否 ST、上市日期 | `stock_individual_info_em` |
 
-> akshare 的列名在不同版本间会变，`src/limitup/data.py` 里统一做了列名归一化，改版时只需改映射表。
+> akshare 的列名在不同版本间会变，`src/short_term_stock_playbook/data.py` 里统一做了列名归一化，改版时只需改映射表。
 
 ---
 

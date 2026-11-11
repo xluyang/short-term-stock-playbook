@@ -3,14 +3,14 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "limitup-playbook"
+name = "short-term-stock-playbook"
 version = "0.1.0"
-description = "A-share limit-up (da-ban) trading playbook: rules, screener, scoring card and trade journal."
+description = "A-share short-term stock trading playbook: rules, screener, scoring card and trade journal."
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
 authors = [{ name = "max_h" }]
-keywords = ["a-share", "limit-up", "trading-playbook", "stock-screener", "akshare", "quant"]
+keywords = ["a-share", "short-term-stock", "trading-playbook", "stock-screener", "akshare", "quant"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Financial and Insurance Industry",
@@ -31,11 +31,11 @@ dev = ["ruff>=0.6", "pytest>=8"]
 journal = ["openpyxl>=3.1"]
 
 [project.scripts]
-limitup = "limitup.cli:main"
+short-term-stock-playbook = "short_term_stock_playbook.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/xluyang/tactical-playbook"
-Issues = "https://github.com/xluyang/tactical-playbook/issues"
+Homepage = "https://github.com/xluyang/short-term-stock-playbook"
+Issues = "https://github.com/xluyang/short-term-stock-playbook/issues"
 
 [tool.setuptools]
 package-dir = { "" = "src" }

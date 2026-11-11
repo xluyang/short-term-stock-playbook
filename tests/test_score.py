@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from limitup import score
+from short_term_stock_playbook import score
 
 
 def test_env_points_bands():
