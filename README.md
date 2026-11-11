@@ -139,9 +139,10 @@ Excel 三页：
 | 命令 | 作用 |
 |---|---|
 | `short-term-stock-playbook doctor` | Python / pandas / akshare 版本、缓存目录、当前模型参数摘要 |
-| `short-term-stock-playbook pools [--date YYYY-MM-DD] [--history-days 90] [--offline]` | 打印池 A / 池 B / 池 C |
-| `short-term-stock-playbook screen [--minutes 25] [--form pullback] [--offline]` | 当日涨停股打分（触板时间与形态需人工确认） |
+| `short-term-stock-playbook pools [--date YYYY-MM-DD] [--history-days 90] [--offline] [--source auto|em|sina]` | 打印池 A / 池 B / 池 C |
+| `short-term-stock-playbook screen [--minutes 25] [--form pullback] [--offline] [--source auto|em|sina]` | 当日涨停股打分（触板时间与形态需人工确认） |
 | `short-term-stock-playbook journal [--out 路径] [--rows 120]` | 生成打卡表 |
+| `short-term-stock-playbook ths [--offline] [--source auto|em|sina] [--apply]` | 同步三层池到同花顺自选股分组（默认 dry-run 只生成清单） |
 
 `--offline`：完全不发网络请求，只读 `cache/`。被东财限流时靠它继续工作。
 

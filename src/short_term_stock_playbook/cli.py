@@ -4,6 +4,7 @@
     short-term-stock-playbook pools         构建三层标的池
     short-term-stock-playbook journal       生成交易打卡表（xlsx）
     short-term-stock-playbook screen        当天候选打分（骨架，需人工确认分时）
+    short-term-stock-playbook ths           同步三层池到同花顺自选股分组
 """
 
 from __future__ import annotations
@@ -143,6 +144,19 @@ def cmd_journal(args: argparse.Namespace) -> int:
     return 0
 
 
+# ----------------------------------------------------------------------- ths
+def cmd_ths(args: argparse.Namespace) -> int:
+    from . import ths
+
+    return ths.sync_ths(
+        trade_date=args.date,
+        offline=args.offline,
+        source=args.source,
+        history_days=args.history_days,
+        dry_run=not args.apply,
+    )
+
+
 # ----------------------------------------------------------------------- main
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="short-term-stock-playbook", description="A 股短线打板筛选工具（研究用途）")
@@ -180,6 +194,18 @@ def build_parser() -> argparse.ArgumentParser:
     p_journal.add_argument("--out", type=str, default=None, help="输出路径")
     p_journal.add_argument("--rows", type=int, default=120, help="预置行数")
     p_journal.set_defaults(func=cmd_journal)
+
+    p_ths = sub.add_parser("ths", help="同步三层池到同花顺自选股分组")
+    p_ths.add_argument("--date", type=dt.date.fromisoformat, default=None, help="YYYY-MM-DD")
+    p_ths.add_argument("--history-days", type=int, default=90, help="池 C 回看交易日数")
+    p_ths.add_argument("--offline", action="store_true", help="只用本地缓存，不联网")
+    p_ths.add_argument(
+        "--source", default="auto", choices=["auto", "em", "sina"],
+        help="行情源：auto=东财失败自动回退新浪；em=东财；sina=新浪",
+    )
+    p_ths.add_argument("--apply", action="store_true",
+                       help="真正调用 adapter 写入同花顺（默认 dry-run 只生成清单）")
+    p_ths.set_defaults(func=cmd_ths)
 
     return parser
 
