@@ -204,7 +204,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="行情源：auto=东财失败自动回退新浪；em=东财；sina=新浪",
     )
     p_ths.add_argument("--apply", action="store_true",
-                       help="真正调用 adapter 写入同花顺（默认 dry-run 只生成清单）")
+                       help="真正写进本机同花顺自选股分组（默认 dry-run 只生成清单；写前自动备份，需先关闭同花顺）")
     p_ths.set_defaults(func=cmd_ths)
 
     return parser

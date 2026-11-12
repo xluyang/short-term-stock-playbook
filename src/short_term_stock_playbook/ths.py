@@ -1,11 +1,11 @@
-"""同花顺自选股分组同步（骨架）。
+"""同花顺自选股分组同步。
 
-把三层池导出成「分组名 → 股票代码列表」，交给外部工具（如 ths-favorite）
-在同花顺里创建 / 更新 / 删除分组。
+把三层池导出成「分组名 → 股票代码列表」，默认 dry-run 只生成
+``output/ths_manifest.json`` 并打印摘要；``--apply`` 时默认调用内置的
+``ths_store.store_adapter``，把三组覆盖写进本机同花顺自选股分组。
 
-默认 dry_run：只生成 `output/ths_manifest.json` 并打印摘要，不真正调用同花顺。
-真正写同花顺的动作由 `adapter` 可调用对象承担 —— 接入 ths-favorite 时只需
-实现这个函数（入参是 manifest dict），再关掉 dry-run。
+要接外部工具（如 ths-favorite）替代内置写入，传 ``adapter`` 可调用对象即可，
+入参是 manifest dict。
 """
 
 from __future__ import annotations
@@ -85,9 +85,14 @@ def sync_ths(
 ) -> int:
     """计算三层池 → 生成 manifest → 可选地调用 adapter 写同花顺。
 
-    返回 0 成功 / 2 未配置 adapter / 3 取数失败（与其它子命令保持一致）。
+    返回 0 成功 / 3 取数失败 / 4 未找到同花顺或写入失败（与其它子命令错开）。
     """
-    from . import config, data, pools  # 延迟导入，避免顶层拖入 akshare
+    from . import (  # 延迟导入，避免顶层拖入 akshare / 文件定位逻辑
+        config,
+        data,
+        pools,
+        ths_store,
+    )
 
     day = trade_date or dt.date.today()
     try:
@@ -109,8 +114,11 @@ def sync_ths(
 
     if not dry_run:
         if adapter is None:
-            print("未配置 ths-favorite 适配器，请先接入 adapter 再关闭 dry-run。", file=sys.stderr)
-            return 2
-        adapter(manifest)
+            adapter = ths_store.store_adapter
+        try:
+            adapter(manifest)
+        except ths_store.ThsStoreError as exc:
+            print(str(exc), file=sys.stderr)
+            return 4
 
     return 0

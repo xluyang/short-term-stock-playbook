@@ -1,5 +1,13 @@
 # short-term-stock-playbook
 
+<p align="center">
+  <a href="https://www.youtube.com/watch?v=ChQ-6tzv3-4" title="点击播放主题视频">
+    <img src="https://img.youtube.com/vi/ChQ-6tzv3-4/maxresdefault.jpg" alt="short-term-stock-playbook 主题视频" width="720">
+  </a>
+  <br>
+  ▶️ <b>主题视频</b>：点击封面直接播放（<a href="https://www.youtube.com/watch?v=ChQ-6tzv3-4">YouTube</a>）
+</p>
+
 > **A 股短线打板打法手册**：一套可执行的涨停接力 playbook —— 规则文档 → 环境判定 → 方向承接 → 个股打分 → 交易打卡，五段闭环。
 > 规则来自一段直播口播的结构化还原，工程上补齐了仓位、过滤、风控与验证。
 
@@ -119,8 +127,18 @@ Excel 三页：
 | `pools.py` | 池 A/B/C 构建（纯函数，可单测） |
 | `score.py` | 打分卡（纯函数，零依赖） |
 | `journal.py` | 打卡表生成器（openpyxl） |
-| `cli.py` | `doctor` / `pools` / `screen` / `journal` |
+| `ths.py` / `ths_store.py` | 三层池 → 同花顺自选股分组同步（写本机文件，默认 dry-run） |
+| `cli.py` | `doctor` / `pools` / `screen` / `journal` / `ths` |
 | `report.py` | 中文对齐的控制台表格与 CSV 导出 |
+
+### 4. 同花顺同步 —— `short-term-stock-playbook ths`
+
+把当日三层池写进本机同花顺的三个自选股分组（`TOP5` / `池B承接` / `池C连板`），覆盖式更新、不每天建新组。默认 dry-run 只生成 `output/ths_manifest.json` 清单；`--apply` 才真正写文件。
+
+- **写前自动备份**：每个被改文件先拷一份带时间戳的副本到 `同花顺用户目录/backup/`，错了可回滚。
+- **不碰无关数据**：加密段（条件选股）、其它分组、自选股总表（`SelfStockInfo.json`）一律不动；分组名复用已存在的分组 ID，查不到才派生新 ID。
+- **必须先关同花顺**：同花顺运行时把这些文件留在内存里，退出时会覆盖；请先退出同花顺再 `--apply`。
+- 定位规则：扫描 `C:`/`D:` 下 `*同花顺*` 目录，找含 `hexin.exe` 的安装目录，再选 `stockblock.ini` 修改时间最新的用户数据目录（排除访客目录）。
 
 ## 打卡表怎么用
 
@@ -142,7 +160,7 @@ Excel 三页：
 | `short-term-stock-playbook pools [--date YYYY-MM-DD] [--history-days 90] [--offline] [--source auto|em|sina]` | 打印池 A / 池 B / 池 C |
 | `short-term-stock-playbook screen [--minutes 25] [--form pullback] [--offline] [--source auto|em|sina]` | 当日涨停股打分（触板时间与形态需人工确认） |
 | `short-term-stock-playbook journal [--out 路径] [--rows 120]` | 生成打卡表 |
-| `short-term-stock-playbook ths [--offline] [--source auto|em|sina] [--apply]` | 同步三层池到同花顺自选股分组（默认 dry-run 只生成清单） |
+| `short-term-stock-playbook ths [--offline] [--source auto|em|sina] [--apply]` | 同步三层池到同花顺自选股分组（默认 dry-run；`--apply` 写本机文件，需先关闭同花顺） |
 
 `--offline`：完全不发网络请求，只读 `cache/`。被东财限流时靠它继续工作。
 
@@ -244,10 +262,13 @@ short-term-stock-playbook/
 - 板块归属（池 B 的方向聚合）需要额外的成分股接口，当前只返回个股；`sector` 字段已带出，但尚未做聚合。
 - 无回测引擎：历史回放建议把 `pools` / `score` 当纯函数，自己写循环。
 - 打板滑点常 > 1%，而策略赚的是 ~2% 的隔日溢价，**执行速度决定生死**。
+- 同花顺同步是**逆向本机文件格式**实现的（`stockblock.ini` + `custom_block/*.json`），不同版本/渠道可能布局不同；跑 `--apply` 前先 dry-run 看一眼清单，写入后在同花顺里确认分组正确。
+- **同花顺同步只改本地文件，不会推到手机端**：同花顺的云同步是带版本号的私有协议（`SelfStock` 平铺列表 / `CustomBlock` 分组），只在**通过它界面改动**时才上传并推送手机；`--apply` 直接写文件不触发上传。要让手机同步，写完 `--apply` 后需在电脑版同花顺里手动做一次界面改动（如任意分组里加删一只票），逼它上传当前状态。
 
 ## 路线图
 
 - [x] 三层池构建 + 打分卡 + 打卡表
+- [x] 同步三层池到同花顺自选股分组（`ths --apply`）
 - [ ] 接入分时接口，自动计算首次触板时间
 - [ ] 板块成分与涨停家数聚合
 - [ ] 历史回测引擎（事件驱动，含滑点模型）
