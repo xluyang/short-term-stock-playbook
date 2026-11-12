@@ -4,6 +4,9 @@
 ``output/ths_manifest.json`` 并打印摘要；``--apply`` 时默认调用内置的
 ``ths_store.store_adapter``，把三组覆盖写进本机同花顺自选股分组。
 
+同时会渲染一份本地 HTML 看板（``output/playbook_YYYYMMDD.html``），
+个股点击可跳转网页版行情 —— 那份清单只存代码，页面才带名称与指标。
+
 要接外部工具（如 ths-favorite）替代内置写入，传 ``adapter`` 可调用对象即可，
 入参是 manifest dict。
 """
@@ -82,8 +85,14 @@ def sync_ths(
     history_days: int = 90,
     adapter: Optional[Adapter] = None,
     dry_run: bool = True,
+    html_out: bool = True,
+    site: str = "ths",
+    html_path: Optional[Path] = None,
 ) -> int:
     """计算三层池 → 生成 manifest → 可选地调用 adapter 写同花顺。
+
+    ``html_out`` 为真时同时把三层池渲染成本地 HTML 看板（``output/playbook_*.html``），
+    个股可点击跳转网页版行情；``site`` 决定默认跳转站点（ths/em/xueqiu）。
 
     返回 0 成功 / 3 取数失败 / 4 未找到同花顺或写入失败（与其它子命令错开）。
     """
@@ -92,6 +101,7 @@ def sync_ths(
         data,
         pools,
         ths_store,
+        web,
     )
 
     day = trade_date or dt.date.today()
@@ -104,6 +114,7 @@ def sync_ths(
         days = data.trade_dates(day, history_days, offline=offline)
         hist = data.zt_history(days, offline=offline)
         pool_c = pools.pool_c(hist, day)
+        s_value = pools.strength(pool_a, spot_df)
     except data.DataError as exc:
         print(str(exc), file=sys.stderr)
         return 3
@@ -111,6 +122,23 @@ def sync_ths(
     manifest = build_manifest(pool_a, pool_b, pool_c)
     path = write_manifest(manifest)
     _print_summary(manifest, path, dry_run)
+
+    if html_out:
+        try:
+            page = web.write_html(
+                pool_a,
+                pool_b,
+                pool_c,
+                trade_date=day,
+                s_value=s_value,
+                position_cap=pools.position_cap(s_value),
+                site=site,
+                path=html_path,
+            )
+        except web.LinkSiteError as exc:
+            print(str(exc), file=sys.stderr)
+            return 2
+        print(f"看板已写入：{page}")
 
     if not dry_run:
         if adapter is None:

@@ -2,6 +2,7 @@
 
     short-term-stock-playbook doctor        环境与参数自检
     short-term-stock-playbook pools         构建三层标的池
+    short-term-stock-playbook web           生成可点击的本地 HTML 看板
     short-term-stock-playbook journal       生成交易打卡表（xlsx）
     short-term-stock-playbook screen        当天候选打分（骨架，需人工确认分时）
     short-term-stock-playbook ths           同步三层池到同花顺自选股分组
@@ -12,6 +13,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import sys
+from pathlib import Path
 from typing import Optional, Sequence
 
 from . import __version__, config, report
@@ -144,6 +146,55 @@ def cmd_journal(args: argparse.Namespace) -> int:
     return 0
 
 
+# ------------------------------------------------------------------------ web
+def cmd_web(args: argparse.Namespace) -> int:
+    """三层池 → 本地 HTML 看板（个股可点击跳转网页版行情）。"""
+    from . import data, pools, web
+
+    trade_date = args.date or dt.date.today()
+    try:
+        spot_df = data.spot(trade_date, offline=args.offline, source=args.source)
+        pool_a = pools.pool_a(spot_df, config.TOP_N)
+        today_zt = data.zt_pool(trade_date, offline=args.offline)
+        prev_zt = data.prev_zt_pool(trade_date, offline=args.offline)
+        pool_b = pools.pool_b(prev_zt, today_zt, config.HANDOFF_MIN_AMOUNT)
+        days = data.trade_dates(trade_date, args.history_days, offline=args.offline)
+        hist = data.zt_history(days, offline=args.offline)
+        pool_c = pools.pool_c(hist, trade_date)
+        s_value = pools.strength(pool_a, spot_df)
+    except data.DataError as exc:
+        _err(str(exc))
+        return 3
+
+    out = Path(args.out) if args.out else None
+    try:
+        page = web.write_html(
+            pool_a,
+            pool_b,
+            pool_c,
+            trade_date=trade_date,
+            s_value=s_value,
+            position_cap=pools.position_cap(s_value),
+            site=args.link,
+            path=out,
+        )
+    except web.LinkSiteError as exc:
+        _err(str(exc))
+        return 2
+
+    counts = f"TOP5 {len(pool_a)} 只 · 池B {len(pool_b)} 只 · 池C {len(pool_c)} 只"
+    _out(f"看板已生成：{page}")
+    _out(f"  分组：{counts}")
+    _out(f"  S 值 = {s_value}  单票仓位上限 = {pools.position_cap(s_value):.0%}")
+    if pools.all_pools_empty(pool_a, pool_b, pool_c):
+        _out("  注意：任意一层为空 → 按模型规则当日不做。")
+    if args.open:
+        import webbrowser
+
+        webbrowser.open(page.resolve().as_uri())
+    return 0
+
+
 # ----------------------------------------------------------------------- ths
 def cmd_ths(args: argparse.Namespace) -> int:
     from . import ths
@@ -154,6 +205,9 @@ def cmd_ths(args: argparse.Namespace) -> int:
         source=args.source,
         history_days=args.history_days,
         dry_run=not args.apply,
+        html_out=not args.no_html,
+        site=args.link,
+        html_path=Path(args.html_out) if args.html_out else None,
     )
 
 
@@ -190,6 +244,22 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_screen.set_defaults(func=cmd_screen)
 
+    p_web = sub.add_parser("web", help="生成可点击的本地 HTML 看板")
+    p_web.add_argument("--date", type=dt.date.fromisoformat, default=None, help="YYYY-MM-DD")
+    p_web.add_argument("--history-days", type=int, default=90, help="池 C 回看交易日数")
+    p_web.add_argument("--out", type=str, default=None, help="输出路径（默认 output/playbook_YYYYMMDD.html）")
+    p_web.add_argument("--link", default="ths", choices=["ths", "em", "xueqiu"],
+                       help="个股点击跳转的站点：ths=同花顺（默认）/ em=东方财富 / xueqiu=雪球")
+    p_web.add_argument("--open", action="store_true", help="生成后用默认浏览器打开")
+    p_web.add_argument(
+        "--offline", action="store_true", help="只用本地缓存，不联网（东财限流时用）"
+    )
+    p_web.add_argument(
+        "--source", default="auto", choices=["auto", "em", "sina"],
+        help="行情源：auto=东财失败自动回退新浪；em=东财；sina=新浪",
+    )
+    p_web.set_defaults(func=cmd_web)
+
     p_journal = sub.add_parser("journal", help="生成交易打卡表")
     p_journal.add_argument("--out", type=str, default=None, help="输出路径")
     p_journal.add_argument("--rows", type=int, default=120, help="预置行数")
@@ -205,6 +275,10 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_ths.add_argument("--apply", action="store_true",
                        help="真正写进本机同花顺自选股分组（默认 dry-run 只生成清单；写前自动备份，需先关闭同花顺）")
+    p_ths.add_argument("--no-html", action="store_true", help="不生成 HTML 看板（默认生成 output/playbook_*.html）")
+    p_ths.add_argument("--html-out", type=str, default=None, help="HTML 看板输出路径")
+    p_ths.add_argument("--link", default="ths", choices=["ths", "em", "xueqiu"],
+                       help="看板里个股点击跳转的站点：ths=同花顺（默认）/ em=东方财富 / xueqiu=雪球")
     p_ths.set_defaults(func=cmd_ths)
 
     return parser

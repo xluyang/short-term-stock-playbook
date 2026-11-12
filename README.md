@@ -128,7 +128,8 @@ Excel 三页：
 | `score.py` | 打分卡（纯函数，零依赖） |
 | `journal.py` | 打卡表生成器（openpyxl） |
 | `ths.py` / `ths_store.py` | 三层池 → 同花顺自选股分组同步（写本机文件，默认 dry-run） |
-| `cli.py` | `doctor` / `pools` / `screen` / `journal` / `ths` |
+| `web.py` | 三层池 → 本地 HTML 看板（个股可点击跳转网页版行情） |
+| `cli.py` | `doctor` / `pools` / `web` / `screen` / `journal` / `ths` |
 | `report.py` | 中文对齐的控制台表格与 CSV 导出 |
 
 ### 4. 同花顺同步 —— `short-term-stock-playbook ths`
@@ -139,6 +140,18 @@ Excel 三页：
 - **不碰无关数据**：加密段（条件选股）、其它分组、自选股总表（`SelfStockInfo.json`）一律不动；分组名复用已存在的分组 ID，查不到才派生新 ID。
 - **必须先关同花顺**：同花顺运行时把这些文件留在内存里，退出时会覆盖；请先退出同花顺再 `--apply`。
 - 定位规则：扫描 `C:`/`D:` 下 `*同花顺*` 目录，找含 `hexin.exe` 的安装目录，再选 `stockblock.ini` 修改时间最新的用户数据目录（排除访客目录）。
+
+### 5. 本地面板 —— `short-term-stock-playbook web`
+
+把三层池渲染成一份**单文件 HTML**（`output/playbook_YYYYMMDD.html`，约 60 KB，零外部依赖），
+双击就能看，也可以直接发群里 / 传到手机。
+
+- **分组即分区**：TOP5 / 池B承接 / 池C连板 各一块；池 C 按连板高度降序，带 `C2` / `C1` 标签。
+- **点击个股跳到网页版行情**：每张卡片都是一个新窗口链接，默认指向同花顺个股页
+  （`stockpage.10jqka.com.cn`），页面顶部可一键切到东方财富或雪球 —— 切换只改 href，不刷新。
+- **`/` 直接搜**：输入代码或名称实时过滤，`Esc` 清空。池 C 常有 90+ 只，靠这个找票。
+- **环境提示内置**：S 值、单票仓位上限、数据日期都在页头；任意一层为空时顶部亮黄条提醒「当日不做」。
+- `--open` 生成后直接用默认浏览器打开；`ths` 命令默认也会顺带生成这份看板（`--no-html` 关闭）。
 
 ## 打卡表怎么用
 
@@ -158,9 +171,10 @@ Excel 三页：
 |---|---|
 | `short-term-stock-playbook doctor` | Python / pandas / akshare 版本、缓存目录、当前模型参数摘要 |
 | `short-term-stock-playbook pools [--date YYYY-MM-DD] [--history-days 90] [--offline] [--source auto|em|sina]` | 打印池 A / 池 B / 池 C |
+| `short-term-stock-playbook web [--date YYYY-MM-DD] [--out 路径] [--link ths|em|xueqiu] [--open] [--offline]` | 生成可点击的本地 HTML 看板 |
 | `short-term-stock-playbook screen [--minutes 25] [--form pullback] [--offline] [--source auto|em|sina]` | 当日涨停股打分（触板时间与形态需人工确认） |
 | `short-term-stock-playbook journal [--out 路径] [--rows 120]` | 生成打卡表 |
-| `short-term-stock-playbook ths [--offline] [--source auto|em|sina] [--apply]` | 同步三层池到同花顺自选股分组（默认 dry-run；`--apply` 写本机文件，需先关闭同花顺） |
+| `short-term-stock-playbook ths [--offline] [--source auto|em|sina] [--apply] [--no-html]` | 同步三层池到同花顺自选股分组（默认 dry-run；`--apply` 写本机文件，需先关闭同花顺；同时生成 HTML 看板） |
 
 `--offline`：完全不发网络请求，只读 `cache/`。被东财限流时靠它继续工作。
 
@@ -188,6 +202,7 @@ short-term-stock-playbook/
 │  ├─ data.py                 唯一接触 akshare 的层
 │  ├─ pools.py / score.py     纯函数：建池、打分
 │  ├─ journal.py / report.py  输出：xlsx 打卡表、终端表格
+│  ├─ web.py                  输出：本地 HTML 看板（个股可点击跳转）
 │  └─ cli.py / config.py      命令入口、全局阈值
 ├─ tests/                     单测（零联网，不依赖 akshare）
 ├─ templates/                 打卡表模板（由 short-term-stock-playbook journal 生成）
@@ -269,6 +284,7 @@ short-term-stock-playbook/
 
 - [x] 三层池构建 + 打分卡 + 打卡表
 - [x] 同步三层池到同花顺自选股分组（`ths --apply`）
+- [x] 三层池 → 本地 HTML 看板，个股点击跳转网页版行情（`web`）
 - [ ] 接入分时接口，自动计算首次触板时间
 - [ ] 板块成分与涨停家数聚合
 - [ ] 历史回测引擎（事件驱动，含滑点模型）
